@@ -10,6 +10,12 @@ http://info.kingcounty.gov/health/ehs/foodsafety/inspections/Results.aspx?Buisne
 
 '''
 import requests
+import os
+from io import open
+from bs4 import BeautifulSoup
+import sys
+import re
+
 
 INSPECTION_DOMAIN = 'http://info.kingcounty.gov'
 INSPECTION_PATH = '/health/ehs/foodsafety/inspections/Results.aspx'
@@ -19,8 +25,8 @@ INSPECTION_PARAMS = {
     'Business_Address': '',
     'Longitude': '',
     'Latitude': '',
-    'City': '',
-    'Zip_Code': '',
+    'City': 'seattle',
+    'Zip_Code': '98103',
     'Inspection_Type': 'All',
     'Inspection_Start': '',
     'Inspection_End': '',
@@ -62,4 +68,78 @@ def get_inspection_page(**kwargs):
 
     resp = requests.get(url)
     resp.raise_for_status()
+    # import pdb; pdb.set_trace()
     return resp.content, resp.encoding
+
+
+def load_inspection_page(filename):
+    '''read a utf-8 html file from disk'''
+    DIR = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(DIR, filename)
+    # with open(path, 'rb') as fh:
+    #     data = fh.read
+    file_ = open(path, 'rb')
+    data = file_.read()
+    encoding = 'utf-8'
+    return data, encoding
+
+
+def parse_source(html, encoding='utf-8'):
+    '''parse the loaded file'''
+    parsed = BeautifulSoup(html, 'html5lib', from_encoding=encoding)
+    return parsed
+
+
+def extract_data_listings(parsed):
+    '''does something'''
+    return parsed.find_all(id=re.compile(r"PR[\d]+~"))
+
+
+def has_two_tds(elem):
+    ''' returns true if the element is a tr and has exactly 2 tds'''
+    is_tr = elem.name == 'tr'
+    td_children = elem.find_all('td', recursive=False)
+    has_two = len(td_children) == 2
+    return is_tr and has_two
+
+
+def clean_data(td):
+    '''clean out the extra white space'''
+    data = td.string
+    try:
+        return data.strip('"\\r\\n" \n\r:-')
+    except AttributeError:
+        return u''
+
+
+def extract_restaurant_metadata(elem):
+    metadata_rows = elem.find('tbody').find_all(
+        has_two_tds, recursive=False
+    )
+    rdata = {}
+    current_label = ''
+    for row in metadata_rows:
+        key_cell, val_cell = row.find_all('td', recursive=False)
+        new_label = clean_data(key_cell)
+        current_label = new_label if new_label else current_label
+        rdata.setdefault(current_label, []).append(clean_data(val_cell))
+    return rdata
+
+if __name__ == "__main__":
+    kwargs = {
+        'Inspection_Start': '2/1/2013',
+        'Inspection_End': '8/1/2016',
+        'Zip_Code': '98103'
+    }
+    # import pdb; pdb.set_trace()
+    if len(sys.argv) > 1 and sys.argv[1] == 'test':
+        html, encoding = load_inspection_page('inspection_page.html')
+    else:
+        html, endocing = get_inspection_page(**kwargs)
+    doc = parse_source(html, encoding)
+    listings = extract_data_listings(doc)
+
+    for listing in listings[:5]:
+        metadata = extract_restaurant_metadata(listing)
+        print(metadata)
+        print()
