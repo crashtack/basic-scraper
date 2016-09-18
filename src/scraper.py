@@ -125,6 +125,47 @@ def extract_restaurant_metadata(elem):
         rdata.setdefault(current_label, []).append(clean_data(val_cell))
     return rdata
 
+
+def is_inspection_row(elem):
+    is_tr = elem.name == 'tr'
+    if not is_tr:
+        return False
+    td_children = elem.find_all('td', recursive=False)
+    has_four = len(td_children) == 4
+    this_text = clean_data(td_children[0]).lower()
+    contains_word = 'inspection' in this_text
+    does_not_start = not this_text.startswith('inspection')
+    return is_tr and has_four and contains_word and does_not_start
+
+
+def extract_score_data(listing):
+    # rows = []
+    # print(listing)
+    rows = listing.find_all(is_inspection_row)
+    max_ = 0
+    average = 0
+    num_in = 0
+    total = 0
+    for index, row in enumerate(rows):
+
+        tds = row.find_all('td', recursive=False)
+        score = int(tds[2].text)
+        # print('score: {}'.format(score))
+        total += score
+        if score > max_:
+            max_ = score
+
+    num_in = index + 1
+    average = total / num_in
+
+    # print('max: {} average: {} inspections: {}'.format(max_, average, num_in))
+    return {
+        'average score': average,
+        'high score': max_,
+        'total inspections': num_in
+    }
+
+
 if __name__ == "__main__":
     kwargs = {
         'Inspection_Start': '2/1/2013',
@@ -141,5 +182,6 @@ if __name__ == "__main__":
 
     for listing in listings[:5]:
         metadata = extract_restaurant_metadata(listing)
-        print(metadata)
-        print()
+        print('\n' + metadata['Business Name'][0])
+        score_data = extract_score_data(listing)
+        print(score_data)
