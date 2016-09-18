@@ -43,7 +43,7 @@ def get_inspection_page(**kwargs):
     url = INSPECTION_DOMAIN + INSPECTION_PATH + '?'
     params = INSPECTION_PARAMS.copy()
     for key, val in kwargs.items():
-        print('key: {}'.format(key))
+        print('key: {} {}'.format(key, val))
         if key in INSPECTION_PARAMS:
             params[key] = val
 
@@ -146,17 +146,18 @@ def extract_score_data(listing):
     average = 0
     num_in = 0
     total = 0
-    for index, row in enumerate(rows):
+    if len(rows) != 0:
+        for index, row in enumerate(rows):
 
-        tds = row.find_all('td', recursive=False)
-        score = int(tds[2].text)
-        # print('score: {}'.format(score))
-        total += score
-        if score > max_:
-            max_ = score
+            tds = row.find_all('td', recursive=False)
+            score = int(tds[2].text)
+            # print('score: {}'.format(score))
+            total += score
+            if score > max_:
+                max_ = score
 
-    num_in = index + 1
-    average = total / num_in
+        num_in = index + 1
+        average = total / num_in
 
     # print('max: {} average: {} inspections: {}'.format(max_, average, num_in))
     return {
@@ -176,12 +177,19 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == 'test':
         html, encoding = load_inspection_page('inspection_page.html')
     else:
-        html, endocing = get_inspection_page(**kwargs)
+        html, encoding = get_inspection_page(**kwargs)
     doc = parse_source(html, encoding)
     listings = extract_data_listings(doc)
 
-    for listing in listings[:5]:
+    for listing in listings:
         metadata = extract_restaurant_metadata(listing)
-        print('\n' + metadata['Business Name'][0])
         score_data = extract_score_data(listing)
-        print(score_data)
+        inspection_data = {}
+        for key in metadata.keys():
+            if len(metadata[key]) == 1:
+                inspection_data.setdefault(key, metadata[key][0])
+            else:
+                inspection_data.setdefault(key, metadata[key])
+        for key in score_data.keys():
+            inspection_data.setdefault(key, score_data[key])
+        print("\n{}".format(inspection_data))
