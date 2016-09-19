@@ -150,7 +150,10 @@ def extract_score_data(listing):
         for index, row in enumerate(rows):
 
             tds = row.find_all('td', recursive=False)
-            score = int(tds[2].text)
+            try:
+                score = int(tds[2].text)
+            except ValueError:
+                pass
             # print('score: {}'.format(score))
             total += score
             if score > max_:
@@ -167,14 +170,14 @@ def extract_score_data(listing):
     }
 
 
-if __name__ == "__main__":
+def generate_results(test):
     kwargs = {
         'Inspection_Start': '2/1/2013',
         'Inspection_End': '8/1/2016',
         'Zip_Code': '98103'
     }
     # import pdb; pdb.set_trace()
-    if len(sys.argv) > 1 and sys.argv[1] == 'test':
+    if test:
         html, encoding = load_inspection_page('inspection_page.html')
     else:
         html, encoding = get_inspection_page(**kwargs)
@@ -192,4 +195,11 @@ if __name__ == "__main__":
                 inspection_data.setdefault(key, metadata[key])
         for key in score_data.keys():
             inspection_data.setdefault(key, score_data[key])
-        print("\n{}".format(inspection_data))
+        # print("\n{}".format(inspection_data))
+        yield inspection_data
+
+
+if __name__ == "__main__":
+    test = len(sys.argv) > 1 and sys.argv[1] == 'test'
+    for result in generate_results(test):
+        print(result)
