@@ -1,6 +1,6 @@
 # basic-scraper of the King County Health inspection Data
 * Returns a dictionary for each business inspected in Seattle zip 98103
-* 
+
 ## ouput sample
 ```
 {'Address': ['2200 N 56TH ST', 'Seattle, WA 98103'],
@@ -14,3 +14,7 @@
  }
 
 ```
+
+## Step 2 Added geolocation and mapping
+
+http://bl.ocks.org/d/230a70fac34effa5b39fe8ddf69b008b
